@@ -5,6 +5,13 @@ import, and optionally switch an electric water heater when sufficient surplus i
 The controller uses a configurable power limit, proportional adjustment and a
 minimum target difference to reduce small control updates.
 
+This implementation can be used as an alternative to the Indevolt built-in battery control, 
+e.g. when you have an older smartmeter (DSMR<=4) that only updates every 10 seconds and 
+you want to avoid the battery constantly switching between charging and discharging. 
+It can also be used to control a boiler or other load when surplus power is available, and
+has a switch to indicate availability of cheap energy and turns on full battery charging and boiler.
+This switch can potentially be controlled using dynamic pricing information (no rules provided yet).
+
 This repository contains a working installation's YAML configuration. It is a
 reference configuration, **not an importable blueprint or a complete, portable
 Home Assistant installation**. Replace the installation-specific entities and
