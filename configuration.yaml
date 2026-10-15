@@ -1,0 +1,334 @@
+
+# Loads default set of integrations. Do not remove.
+# default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+homeassistant:
+  external_url: "http://127.0.0.1:8000/"
+  internal_url: "http://localhost:8123"
+
+zha:
+  zigpy_config:
+    znp_config:
+      tx_power: 20
+
+#mqtt: !include mqtt_with_smartmeter.yaml
+mqtt: !include mqtt_without_smartmeter.yaml
+
+sensor:
+# integrate solar production in Watt from 1phase inverter
+  - platform: integration
+    source: sensor.solar_panel_delivery2
+    name: "Solar Panel Energy SinglePhase"
+    unique_id: "solar_panel_energy"
+    unit_prefix: k
+    round: 6
+    max_sub_interval:
+      minutes: 1
+# integrate boiler usage in Watt from boiler_plug_power
+  - platform: integration
+    #source: sensor.boiler_plug_power
+    source: sensor.advanced_energy_monitoring_smartplug_for_boiler_power
+    name: boiler_energy_usage
+    unique_id: "boiler_energy_usage"
+    unit_prefix: k
+    round: 6
+    max_sub_interval:
+      minutes: 1
+# integrate plintboiler usage in Watt from smart_plug_energy_sniffer_power
+  - platform: integration
+    #source: sensor.smart_plug_energy_sniffer_power
+    source: sensor.advanced_energy_monitoring_smartplug_for_sniffer_power
+    name: plintboiler_energy_usage
+    unique_id: "plintboiler_energy_usage"
+    unit_prefix: k
+    round: 6
+    max_sub_interval:
+      minutes: 1
+# Integrate infrared panel usage in Watt from infrarood_paneel_power
+  - platform: integration
+    #source: sensor.infrarood_paneel_power
+    source: sensor.energy_monitoring_smartplug_for_ir_panel_power
+    name: infrared_panel_energy_usage
+    unique_id: "infrared_panel_energy_usage"
+    unit_prefix: k
+    round: 6
+    max_sub_interval:
+      minutes: 1
+
+input_number:
+  battery_damping_percent:
+    name: "Battery control damping"
+    min: 1
+    max: 100
+    step: 1
+    initial: 30
+    unit_of_measurement: "%"
+    mode: box
+  battery_min_power_difference:
+    name: "Battery minimum target difference"
+    min: 0
+    max: 1000
+    step: 10
+    initial: 100
+    unit_of_measurement: "W"
+    mode: box
+  battery_power_limit_step:
+    name: "Battery power limit adjustment step"
+    min: 1
+    max: 1000
+    step: 1
+    initial: 100
+    unit_of_measurement: "W"
+    mode: box
+  battery_power_limit:
+    name: "Battery charge/discharge power limit"
+    min: 100
+    max: 3000
+    step: 100
+    initial: 2400
+    unit_of_measurement: "W"
+    mode: box
+  real_time_battery_power:
+    name: "Real time battery power"
+    min: -3.0
+    max: 3.0
+    step: 0.001
+    unit_of_measurement: "kW"
+
+input_boolean:
+  force_cheap_energy:
+    name: "Force Cheap Energy"
+    icon: mdi:flash
+
+template:
+# calculate the surplus from actual production/delivery - actual usage
+ - sensor:
+   - unique_id: power_surplus
+     unit_of_measurement: "kW"
+     default_entity_id: sensor.power_surplus
+     name: Power Surplus
+     availability: >
+       {{ states('sensor.electricity_meter_power_production') not in ['unknown', 'unavailable'] and states('sensor.electricity_meter_power_consumption') not in ['unknown', 'unavailable'] }}
+       #{{ states('sensor.actual_production') not in ['unknown', 'unavailable'] and states('sensor.actual_usage') not in ['unknown', 'unavailable'] }}
+     #state: '{{ states(''sensor.actual_production'') | float - states(''sensor.actual_usage'') | float }}'
+     state: '{{ states(''sensor.electricity_meter_power_production'') | float - states(''sensor.electricity_meter_power_consumption'') | float }}'
+   - name: "Battery Virtual State"
+     unique_id: battery_virtual_state
+     device_class: enum
+     availability: >
+       {{ states('sensor.indevolt_cms_sf2000_real_time_mode') not in ['unknown', 'unavailable'] and states('sensor.indevolt_cms_sf2000_battery_soc') not in ['unknown', 'unavailable'] }}
+     state: >
+       {% set mode = states('sensor.indevolt_cms_sf2000_real_time_mode') | lower | trim %}
+       {% set soc = states('sensor.indevolt_cms_sf2000_battery_soc') | float %}
+       {% if soc > 99 and mode =='charging' %}
+         static
+       {% elif soc <= 10 and mode =='discharging' %}
+         static
+       {% elif mode =='standby' %}
+         static
+       {% else %}
+         {{ mode }}
+       {% endif %}
+   - unique_id: real_time_battery_power
+     unit_of_measurement: "W"
+     name: Real time battery power
+     availability: >
+       {{ states('sensor.indevolt_cms_sf2000_ac_output_power') not in ['unknown', 'unavailable'] and states('sensor.indevolt_cms_sf2000_ac_input_power') not in ['unknown', 'unavailable'] }}
+     state: >
+       {% set out = states('sensor.indevolt_cms_sf2000_ac_output_power')|float %}
+       {% set in = states('sensor.indevolt_cms_sf2000_ac_input_power')|float %}
+       {{ in - out }}
+# calculate the battery surplus from surplus - battery
+   - unique_id: battery_surplus
+     unit_of_measurement: "kW"
+     default_entity_id: sensor.battery_surplus
+     name: Battery Surplus
+     availability: >
+       {{ states('sensor.power_surplus') not in ['unknown', 'unavailable'] and states('input_number.real_time_battery_power') not in ['unknown', 'unavailable'] }}
+     state: '{{ states(''sensor.power_surplus'') | float + states(''input_number.real_time_battery_power'') | float }}'
+     #state: '{{ states(''sensor.power_surplus'') | float - states(''sensor.indevolt_cms_sf2000_battery_power'') | float / 1000 }}'
+
+# Define utility meters
+utility_meter:
+  hourly_gas_usage:
+    source: sensor.gas
+    unique_id: "hourly_gas_usage"
+    cycle: hourly
+  daily_gas_usage:
+    source: sensor.gas
+    unique_id: "daily_gas_usage"
+    cycle: daily
+  monthly_gas_usage:
+    source: sensor.gas
+    unique_id: "monthly_gas_usage"
+    cycle: monthly
+  daily_electricity_usage_high_tariff:
+    source: sensor.electricity_usage_high_tariff
+    unique_id: "electricity_usage_high_tariff"
+    cycle: daily
+  daily_electricity_usage_low_tariff:
+    source: sensor.electricity_usage_low_tariff
+    unique_id: "electricity_usage_low_tariff"
+    cycle: daily
+  daily_electricity_production_high_tariff:
+    source: sensor.electricity_production_high_tariff
+    unique_id: "daily_electricity_production_high_tariff"
+    cycle: daily
+  daily_electricity_production_low_tariff:
+    source: sensor.electricity_production_low_tariff
+    unique_id: "daily_electricity_production_low_tariff"
+    cycle: daily
+  monthly_electricity_production_high_tariff:
+    source: sensor.electricity_production_high_tariff
+    unique_id: "monthly_electricity_production_high_tariff"
+    cycle: monthly
+  monthly_electricity_production_low_tariff:
+    source: sensor.electricity_production_low_tariff
+    unique_id: "monthly_electricity_production_low_tariff"
+    cycle: monthly
+  monthly_electricity_usage_high_tariff:
+    source: sensor.electricity_usage_high_tariff
+    unique_id: "monthly_electricity_usage_high_tariff"
+    cycle: monthly
+  monthly_electricity_usage_low_tariff:
+    source: sensor.electricity_usage_low_tariff
+    unique_id: "monthly_electricity_usage_low_tariff"
+    cycle: monthly
+
+  hourly_gas_consumption:
+    source: sensor.gas_meter_gas_consumption
+    unique_id: "hourly_gas_consumption"
+    cycle: hourly
+  daily_gas_comsumption:
+    source: sensor.gas_meter_gas_consumption
+    unique_id: "daily_gas_consuption"
+    cycle: daily
+  daily_electricity_consumption_tarif_1:
+    source: sensor.electricity_meter_energy_consumption_tarif_1
+    unique_id: "electricity_consumption_tarif_1"
+    cycle: daily
+  daily_electricity_consumption_tarif_2:
+    source: sensor.electricity_meter_energy_consumption_tarif_2
+    unique_id: "electricity_consumption_tarif_2"
+    cycle: daily
+  daily_electricity_production_tarif_1:
+    source: sensor.electricity_meter_energy_production_tarif_1
+    unique_id: "daily_electricity_production_tarif_1"
+    cycle: daily
+  daily_electricity_production_tarif_2:
+    source: sensor.electricity_meter_energy_production_tarif_2
+    unique_id: "daily_electricity_production_tarif_2"
+    cycle: daily
+  hourly_boiler_usage:
+    source: sensor.boiler_energy_usage
+    unique_id: "hourly_boiler_usage"
+    cycle: hourly
+  daily_boiler_usage:
+    source: sensor.boiler_energy_usage
+    unique_id: "daily_boiler_usage"
+    cycle: daily
+  monthly_boiler_usage:
+    source: sensor.boiler_energy_usage
+    unique_id: "monthly_boiler_usage"
+    cycle: monthly
+  hourly_plintboiler_usage:
+    source: sensor.plintboiler_energy_usage
+    unique_id: "hourly_plintboiler_usage"
+    cycle: hourly
+  daily_plintboiler_usage:
+    source: sensor.plintboiler_energy_usage
+    unique_id: "daily_plintboiler_usage"
+    cycle: daily
+  monthly_plintboiler_usage:
+    source: sensor.plintboiler_energy_usage
+    unique_id: "monthly_plintboiler_usage"
+    cycle: monthly
+  hourly_infrared_panel_usage:
+    source: sensor.infrared_panel_energy_usage
+    unique_id: "hourly_infrared_panel_usage"
+    cycle: hourly
+  daily_infrared_panel_usage:
+    source: sensor.infrared_panel_energy_usage
+    unique_id: "daily_infrared_panel_usage"
+    cycle: daily
+  monthly_infrared_panel_usage:
+    source: sensor.infrared_panel_energy_usage
+    unique_id: "monthly_infrared_panel_usage"
+    cycle: monthly
+
+  monthly_gas_consumption:
+    source: sensor.gas_meter_gas_consumption
+    unique_id: "monthly_gas_consumption"
+    cycle: monthly
+  monthly_electricity_consumption_tarif_1:
+    source: sensor.electricity_meter_energy_consumption_tarif_1
+    unique_id: "monthly_electricity_consumption_tarif_1"
+    cycle: monthly
+  monthly_electricity_consumption_tarif_2:
+    source: sensor.electricity_meter_energy_consumption_tarif_2
+    unique_id: "monthly_electricity_consumption_tarif_2"
+    cycle: monthly
+  monthly_electricity_production_tarif_1:
+    source: sensor.electricity_meter_energy_production_tarif_1
+    unique_id: "monthly_electricity_production_tarif_1"
+    cycle: monthly
+  monthly_electricity_production_tarif_2:
+    source: sensor.electricity_meter_energy_production_tarif_2
+    unique_id: "monthly_electricity_production_tarif_2"
+    cycle: monthly
+
+# These scripts use the configurable step; native helper arrows keep step: 100.
+script battery:
+  battery_power_limit_adjust:
+    alias: "Battery power limit: adjust"
+    mode: queued
+    max: 20
+    fields:
+      direction:
+        name: Direction
+        required: true
+        selector:
+          select:
+            options:
+            - increase
+            - decrease
+    sequence:
+    - condition: template
+      value_template: |-
+        {{ direction in ['increase', 'decrease']
+           and is_number(states('input_number.battery_power_limit'))
+           and is_number(states('input_number.battery_power_limit_step')) }}
+    - variables:
+        limit_w: "{{ states('input_number.battery_power_limit') | float }}"
+        step_w: "{{ states('input_number.battery_power_limit_step') | float }}"
+        min_w: "{{ state_attr('input_number.battery_power_limit', 'min') | float(100) }}"
+        max_w: "{{ state_attr('input_number.battery_power_limit', 'max') | float(3000) }}"
+    - action: input_number.set_value
+      target:
+        entity_id: input_number.battery_power_limit
+      data:
+        value: |-
+          {% set delta = step_w if direction == 'increase' else -step_w %}
+          {{ [[limit_w + delta, max_w] | min, min_w] | max }}
+  battery_power_limit_increase:
+    alias: "Battery power limit: increase"
+    mode: parallel
+    sequence:
+    - action: script.battery_power_limit_adjust
+      data:
+        direction: increase
+  battery_power_limit_decrease:
+    alias: "Battery power limit: decrease"
+    mode: parallel
+    sequence:
+    - action: script.battery_power_limit_adjust
+      data:
+        direction: decrease

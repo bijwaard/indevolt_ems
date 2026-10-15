@@ -1,0 +1,19 @@
+# One dashboard card. Requires the helpers and script battery configuration.
+type: entities
+title: Battery EMS controls
+show_header_toggle: false
+entities:
+  - entity: input_number.battery_power_limit
+  - entity: input_number.battery_damping_percent
+  - entity: input_number.battery_min_power_difference
+  - entity: input_number.battery_power_limit_step
+  - entity: script.battery_power_limit_decrease
+    name: Decrease limit by configured step
+  - entity: script.battery_power_limit_increase
+    name: Increase limit by configured step
+  - entity: input_boolean.force_cheap_energy
+  - entity: input_boolean.boiler_block_battery
+  - entity: sensor.power_surplus
+  - entity: sensor.battery_surplus
+  - entity: input_number.real_time_battery_power
+    name: Last requested power (not measured)

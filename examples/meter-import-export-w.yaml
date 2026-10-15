@@ -1,0 +1,16 @@
+# Merge into configuration.yaml; replace the placeholder entities.
+# Alternative to the root power_surplus template, not an additional sensor.
+template:
+  - sensor:
+      - name: Power Surplus
+        unique_id: power_surplus
+        default_entity_id: sensor.power_surplus
+        unit_of_measurement: kW
+        device_class: power
+        state_class: measurement
+        availability: >-
+          {{ is_number(states('sensor.your_grid_export_power_w'))
+             and is_number(states('sensor.your_grid_import_power_w')) }}
+        state: >-
+          {{ ((states('sensor.your_grid_export_power_w') | float(0))
+              - (states('sensor.your_grid_import_power_w') | float(0))) / 1000 }}

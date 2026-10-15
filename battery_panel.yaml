@@ -1,0 +1,221 @@
+views:
+  - type: sections
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: INDEVOLT CMS-SF2000
+          - type: tile
+            entity: switch.indevolt_cms_sf2000_allow_grid_charging
+            grid_options:
+              columns: full
+          - type: tile
+            entity: switch.indevolt_cms_sf2000_bypass_socket
+            grid_options:
+              columns: full
+          - type: tile
+            entity: number.indevolt_cms_sf2000_discharge_limit
+            grid_options:
+              columns: full
+          - type: tile
+            entity: button.indevolt_cms_sf2000_enable_standby_mode
+            grid_options:
+              columns: full
+          - type: tile
+            entity: select.indevolt_cms_sf2000_energy_mode
+            grid_options:
+              columns: full
+          - type: tile
+            entity: number.indevolt_cms_sf2000_feed_in_power_limit
+            grid_options:
+              columns: full
+          - type: tile
+            entity: number.indevolt_cms_sf2000_inverter_input_limit
+            grid_options:
+              columns: full
+          - type: tile
+            entity: switch.indevolt_cms_sf2000_led_indicator
+            grid_options:
+              columns: full
+          - type: tile
+            entity: number.indevolt_cms_sf2000_max_ac_output_power
+            grid_options:
+              columns: full
+          - type: tile
+            grid_options:
+              columns: full
+            entity: input_number.battery_power_limit
+            vertical: false
+            features:
+              - type: numeric-input
+            features_position: inline
+          - type: tile
+            grid_options:
+              columns: full
+            entity: input_boolean.force_cheap_energy
+            vertical: false
+            features:
+              - type: toggle
+            features_position: inline
+        column_span: 1
+      - type: grid
+        cards:
+          - type: heading
+            heading: Real-time
+            heading_style: title
+          - type: tile
+            entity: sensor.indevolt_cms_sf2000_ac_input_power
+            grid_options:
+              columns: full
+          - type: tile
+            entity: sensor.indevolt_cms_sf2000_ac_output_power
+            grid_options:
+              columns: full
+          - type: tile
+            entity: sensor.indevolt_cms_sf2000_battery_charge_discharge_state
+            grid_options:
+              columns: full
+          - type: tile
+            grid_options:
+              columns: full
+            entity: switch.indevolt_cms_sf2000_allow_grid_charging
+            vertical: false
+            features:
+              - type: toggle
+            features_position: inline
+          - type: tile
+            entity: sensor.indevolt_cms_sf2000_battery_power
+            grid_options:
+              columns: full
+          - type: tile
+            entity: sensor.indevolt_cms_sf2000_battery_soc
+            grid_options:
+              columns: full
+          - type: tile
+            entity: sensor.indevolt_cms_sf2000_real_time_power_limit
+            grid_options:
+              columns: full
+          - type: tile
+            entity: sensor.battery_virtual_state
+            grid_options:
+              columns: full
+          - type: tile
+            grid_options:
+              columns: full
+            entity: sensor.indevolt_cms_sf2000_real_time_target_soc
+            vertical: false
+            features:
+              - type: bar-gauge
+            features_position: inline
+          - type: tile
+            grid_options:
+              columns: full
+            entity: input_number.real_time_battery_power
+            vertical: false
+            features:
+              - type: numeric-input
+            features_position: inline
+          - type: tile
+            entity: input_number.battery_damping_percent
+            show_entity_picture: false
+            hide_state: false
+            vertical: false
+            features:
+              - type: numeric-input
+            features_position: inline
+          - type: tile
+            grid_options:
+              columns: full
+            entity: input_number.battery_min_power_difference
+            vertical: false
+            features:
+              - type: numeric-input
+            features_position: inline
+          - type: tile
+            grid_options:
+              columns: full
+            entity: input_number.battery_power_limit_step
+            vertical: false
+            features:
+              - type: numeric-input
+            features_position: inline
+      - type: grid
+        cards:
+          - type: heading
+            heading_style: title
+            heading: Last week
+          - type: statistics-graph
+            entities:
+              - sensor.indevolt_cms_sf2000_total_ac_output_energy
+            days_to_show: 7
+            period: day
+            chart_type: bar
+            stat_types:
+              - change
+          - type: statistics-graph
+            entities:
+              - sensor.indevolt_cms_sf2000_total_ac_input_energy
+            days_to_show: 7
+            period: day
+            chart_type: bar
+            stat_types:
+              - change
+      - cards:
+          - type: heading
+            heading: History
+          - type: history-graph
+            entities:
+              - entity: sensor.advanced_energy_monitoring_smartplug_for_boiler_power
+              - entity: sensor.indevolt_cms_sf2000_ac_input_power
+              - entity: sensor.indevolt_cms_sf2000_ac_output_power
+              - entity: sensor.battery_surplus
+              - entity: sensor.power_surplus
+              - entity: input_boolean.boiler_block_battery
+              - entity: input_boolean.force_cheap_energy
+              - entity: input_number.real_time_battery_power
+              - entity: sensor.indevolt_cms_sf2000_battery_soc
+              - entity: sensor.battery_virtual_state
+            title: History
+            hours_to_show: 2
+            show_names: true
+    header:
+      card:
+        type: markdown
+        content: '# Battery monitoring'
+        text_only: true
+    badges:
+      - type: entity
+        entity: sensor.indevolt_cms_sf2000_battery_soc
+        show_name: false
+      - type: entity
+        show_name: false
+        show_state: true
+        show_icon: true
+        entity: sensor.battery_virtual_state
+      - type: entity
+        entity: input_number.real_time_battery_power
+      - type: entity
+        entity: input_boolean.boiler_block_battery
+        show_name: true
+      - type: entity
+        entity: input_boolean.force_cheap_energy
+        show_name: true
+      - type: entity
+        entity: switch.advanced_energy_monitoring_smartplug_for_boiler
+        show_name: true
+      - type: entity
+        entity: sensor.daily_boiler_usage
+        show_name: true
+      - type: entity
+        entity: sensor.power_surplus
+        show_name: true
+      - type: entity
+        entity: sensor.battery_surplus
+        show_name: true
+      - type: entity
+        entity: sensor.solar_panel_delivery2
+        show_name: true
+      - type: entity
+        entity: sensor.solar_panel_triphase
+        show_name: true
+

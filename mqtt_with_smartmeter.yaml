@@ -1,0 +1,144 @@
+sensor:
+  - name: "Solar Panel Delivery"
+    state_topic: "domoticz/out"
+    value_template: >
+      {% if value_json.name == 'Solar uitbouw' and value_json.svalue2 is not none and value_json.svalue2 != 'unknown' %}
+        {{ value_json.svalue2 | float * 0.001 }}
+      {% else %}
+        {{ states('sensor.solar_panel_delivery') | float('nan') }}
+      {% endif %}
+    unit_of_measurement: "kWh"
+    # device_class: energy
+    state_class: total_increasing
+    unique_id: "solar_panel_delivery"
+
+  - name: "Solar Panel Delivery2"
+    state_topic: "domoticz/in"
+    value_template: >
+      {% if value_json.name == 'inverter:power_median' and value_json.svalue is not none and value_json.svalue != 'unknown' %}
+        {{ value_json.svalue.split(';')[-1] | float*-1.0 | round(2) }}
+      {% else %}
+        {{ states('sensor.solar_panel_delivery2') | float('nan') }}
+      {% endif %}
+    unit_of_measurement: "W"
+    # device_class: energy
+    state_class: total
+    unique_id: "solar_panel_delivery2"
+
+  - name: "Solar Panel TriPhase"
+    state_topic: "domoticz/in"
+    value_template: >
+     {% if value_json.name == 'CT2:power_median' and value_json.svalue is not none %}
+        {% set phases = value_json.svalue.split(';') %}
+        {{ (phases[0]|float + phases[1]|float + phases[2]|float) * -1.0 | round(2) }}
+      {% else %}
+        {{ states('sensor.solar_panel_triphase') | float('nan') }}
+      {% endif %}
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    unique_id: "solar_panel_triphase"
+
+  - name: "Solar Panel Single Phase"
+    state_topic: "domoticz/in"
+    value_template: >
+      {% if value_json.name == 'inverter:energy' and value_json.svalue is not none and value_json.svalue != 'unknown' %}
+        {{ value_json.svalue | float * -1.0 }}
+      {% else %}
+        {{ states('sensor.solar_panel_singlephase') | float('nan') }}
+      {% endif %}
+    unit_of_measurement: "Wh"
+    device_class: energy
+    state_class: total
+    unique_id: "solar_panel_singlephase"
+
+  - name: "Gas"
+    state_topic: "domoticz/out"
+    value_template: >
+      {% if value_json.name == 'Gas' and value_json.svalue1 is not none and value_json.svalue1 != 'unknown' %}
+        {{ value_json.svalue1 | float * 0.001 }}
+      {% else %}
+        {{ states('sensor.gas') | float('nan') }}
+      {% endif %}
+    unit_of_measurement: "m³"
+    device_class: gas
+    state_class: total_increasing
+    unique_id: "gas_usage"
+
+  - name: "Electricity Usage High Tariff"
+    state_topic: "domoticz/out"
+    value_template: >
+      {% if value_json.name == 'Power' and value_json.svalue1 is not none and value_json.svalue1 != 'unknown' %}
+        {{ value_json.svalue1 | float * 0.001 }}
+      {% else %}
+        {{ states('sensor.electricity_usage_high_tariff') | float('nan') }}
+      {% endif %}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    unique_id: "electricity_usage_high_tariff"
+
+  - name: "Electricity Usage Low Tariff"
+    state_topic: "domoticz/out"
+    value_template: >
+      {% if value_json.name == 'Power' and value_json.svalue2 is not none and value_json.svalue2 != 'unknown' %}
+        {{ value_json.svalue2 | float * 0.001 }}
+      {% else %}
+        {{ states('sensor.electricity_usage_low_tariff') | float('nan') }}
+      {% endif %}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    unique_id: "electricity_usage_low_tariff"
+
+  - name: "Electricity Production High Tariff"
+    state_topic: "domoticz/out"
+    value_template: >
+      {% if value_json.name == 'Power' and value_json.svalue3 is not none and value_json.svalue3 != 'unknown' %}
+        {{ value_json.svalue3 | float * 0.001 }}
+      {% else %}
+        {{ states('sensor.electricity_production_high_tariff') | float('nan') }}
+      {% endif %}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    unique_id: "electricity_production_high_tariff"
+
+  - name: "Electricity Production Low Tariff"
+    state_topic: "domoticz/out"
+    value_template: >
+      {% if value_json.name == 'Power' and value_json.svalue4 is not none and value_json.svalue4 != 'unknown' %}
+        {{ value_json.svalue4 | float * 0.001 }}
+      {% else %}
+        {{ states('sensor.electricity_production_low_tariff') | float('nan') }}
+      {% endif %}
+    unit_of_measurement: "kWh"
+    device_class: energy
+    state_class: total_increasing
+    unique_id: "electricity_production_low_tariff"
+
+  - name: "Actual production"
+    state_topic: "domoticz/out"
+    value_template: >
+      {% if value_json.name == 'Actual Delivery (L1 + L2 + L3)' and value_json.svalue1 is not none and value_json.svalue1 != 'unknown' %}
+        {{ value_json.svalue1 | float * 0.001 }}
+      {% else %}
+        {{ states('sensor.actual_production') | float('nan') }}
+      {% endif %}
+    unit_of_measurement: "kW"
+    # device_class: energy
+    state_class: measurement
+    unique_id: "actual_delivery"
+
+  - name: "Actual usage"
+    state_topic: "domoticz/out"
+    value_template: >
+      {% if value_json.name == 'Actual Usage (L1 + L2 + L3)' and value_json.svalue1 is not none and value_json.svalue1 != 'unknown' %}
+        {{ value_json.svalue1 | float * 0.001 }}
+      {% else %}
+        {{ states('sensor.actual_usage') | float('nan') }}
+      {% endif %}
+    unit_of_measurement: "kW"
+    # device_class: energy
+    state_class: measurement
+    unique_id: "actual_usage"

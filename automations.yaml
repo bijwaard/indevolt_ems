@@ -1,0 +1,222 @@
+- id: '1743148795916'
+  alias: Boiler on
+  description: ''
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.battery_surplus
+    above: 1.8
+    for:
+      seconds: 10
+  - trigger: state
+    entity_id: input_boolean.force_cheap_energy
+    from: 'off'
+    to: 'on'
+  conditions:
+  - condition: state
+    entity_id: input_boolean.boiler_block_battery
+    state: 'off'
+  - condition: or
+    conditions:
+    - condition: numeric_state
+      entity_id: sensor.battery_surplus
+      above: 1.8
+    - condition: state
+      entity_id: input_boolean.force_cheap_energy
+      state: 'on'
+  actions:
+  - action: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.boiler_block_battery
+  - action: switch.turn_on
+    target:
+      device_id: ef9813aa9e883f924d40150519fe6d74
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 30
+      milliseconds: 0
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.boiler_block_battery
+    enabled: true
+    data: {}
+  mode: single
+- id: '1743148921956'
+  alias: Boiler off
+  description: ''
+  triggers:
+  - trigger: template
+    value_template: '{{ states(''sensor.battery_surplus'') | float(0) < -1.1 }}'
+    for:
+      seconds: 15
+  - trigger: state
+    entity_id: input_boolean.force_cheap_energy
+    to: 'off'
+  - trigger: numeric_state
+    entity_id: sensor.battery_surplus
+    for:
+      seconds: 15
+    below: -1.1
+    enabled: false
+  - trigger: template
+    value_template: '"{{ states(''sensor.battery_surplus'') | float(0) < -1.1 }}"'
+    for:
+      seconds: 15
+    enabled: false
+  conditions:
+  - condition: state
+    entity_id: input_boolean.force_cheap_energy
+    state: 'off'
+  - condition: template
+    value_template: '{{ states(''sensor.battery_surplus'') | float(0) < -1.1 }}'
+  actions:
+  - action: switch.turn_off
+    target:
+      device_id: ef9813aa9e883f924d40150519fe6d74
+  mode: single
+- id: '1787741065937'
+  alias: battery control
+  description: Controls charging, discharging and standby with configurable damping and
+    minimum target difference, supports Force Cheap Energy
+  triggers:
+  - trigger: state
+    entity_id:
+    - sensor.power_surplus
+    - input_number.battery_power_limit
+    - input_number.battery_damping_percent
+    - input_number.battery_min_power_difference
+  conditions: []
+  actions:
+  - variables:
+      damping: |-
+        {{ (states('input_number.battery_damping_percent') | float(30)) / 100 }}
+      min_difference_kw: |-
+        {{ (states('input_number.battery_min_power_difference') | float(100)) / 1000 }}
+      is_force_cheap: '{{ is_state(''input_boolean.force_cheap_energy'', ''on'') }}'
+      battery_state: '{{ states(''sensor.battery_virtual_state'') }}'
+      battery_surplus: |
+        {% if battery_state in ['static'] %}
+          {{ states('sensor.power_surplus') | float(0) }}
+        {% else %}
+          {{ states('sensor.battery_surplus') | float(0) }}
+        {% endif %}
+      current: |
+        {% if battery_state in ['static'] %}
+          0.0
+        {% else %}
+          {{ states('input_number.real_time_battery_power') | float(0) }}
+        {% endif %}
+      soc: '{{ states(''sensor.indevolt_cms_sf2000_battery_soc'') | float(0) }}'
+      target: |
+        {% if is_force_cheap %}
+          {{ (states('input_number.battery_power_limit') | float(2400)) / 1000 }}
+        {% elif battery_surplus > 0.05 and soc < 100 %}
+          {{ [ battery_surplus, ((states('input_number.battery_power_limit') | float(2400)) / 1000) ] | min }}
+        {% elif battery_surplus < -0.05 and soc > 10 %}
+          {{ [ battery_surplus, -((states('input_number.battery_power_limit') | float(2400)) / 1000) ] | max }}
+        {% else %}
+          0.0
+        {% endif %}
+      new_power_kw: |
+        {% set val = current + (target - current) * damping %}
+        {{ [ [ val, ((states('input_number.battery_power_limit') | float(2400)) / 1000) ] | min, -((states('input_number.battery_power_limit') | float(2400)) / 1000) ] | max }}
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ new_power_kw | float > 0.05 }}'
+      - condition: state
+        entity_id: input_boolean.boiler_block_battery
+        state: 'off'
+      - condition: template
+        value_template: '{{ (target - current) | abs > min_difference_kw }}'
+      sequence:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.real_time_battery_power
+        data:
+          value: '{{ new_power_kw | round(3) }}'
+      - action: indevolt.charge
+        data:
+          device_id: c9489c0a5a20c9227366b0680f81b482
+          target_soc: 100
+          power: '{{ (new_power_kw | float * 1000) | round(0) }}'
+    - conditions:
+      - condition: template
+        value_template: '{{ new_power_kw | float < -0.05 }}'
+      - condition: template
+        value_template: '{{ (target - current) | abs > min_difference_kw }}'
+      sequence:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.real_time_battery_power
+        data:
+          value: '{{ new_power_kw | round(3) }}'
+      - action: indevolt.discharge
+        data:
+          device_id: c9489c0a5a20c9227366b0680f81b482
+          target_soc: 10
+          power: '{{ (new_power_kw | float * -1000) | round(0) }}'
+    - conditions:
+      - condition: template
+        value_template: '{{ new_power_kw | float | abs <= 0.05 }}'
+      - condition: template
+        value_template: '{{ current != 0 }}'
+      sequence:
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.real_time_battery_power
+        data:
+          value: 0
+      - action: button.press
+        target:
+          entity_id: button.indevolt_cms_sf2000_enable_standby_mode
+  mode: single
+- id: '1789000000002'
+  alias: battery reset memory on static
+  description: Turn real_time_battery_power helper to 0 when battery is in standby
+  triggers:
+  - trigger: state
+    entity_id: sensor.battery_virtual_state
+    to:
+    - static
+    - idle
+  conditions: []
+  actions:
+  - action: input_number.set_value
+    target:
+      entity_id: input_number.real_time_battery_power
+    data:
+      value: 0
+  mode: single
+- id: '1789000000004'
+  alias: Boiler Safety Block Turn Off
+  description: Automatically turns off the boiler_block_battery helper if it remains
+    on for more than 30 seconds
+  triggers:
+  - trigger: state
+    entity_id:
+    - input_boolean.boiler_block_battery
+    to:
+    - 'on'
+    for:
+      hours: 0
+      minutes: 1
+      seconds: 0
+  - trigger: homeassistant
+    event: start
+  - trigger: time_pattern
+    minutes: /1
+  conditions:
+  - condition: state
+    entity_id: input_boolean.boiler_block_battery
+    state:
+    - 'on'
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 45
+  actions:
+  - action: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.boiler_block_battery
+  mode: single
