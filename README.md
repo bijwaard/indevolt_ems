@@ -29,7 +29,10 @@ device IDs before enabling its automations.
 | [examples/](examples/README.md) | Portable helper, meter and dashboard snippets with installation instructions |
 
 Note that MQTT was initially used for my grid power read by Domoticz, 
-the grid measurements from the P1 meter are now shared between Domoticz and Home Assistant using ser2net and socat.
+the grid measurements from the P1 meter are now distributed to Domoticz and Home Assistant using ser2net.
+
+- In Home Assistant the TCP port (e.g. socket://192.168.0.160:5555) from ser2net is used via the DSMR Smart Meter integration.
+- The socat command is used to give Domotics a virtual serial port (e.g. /dev/ttyUSB10).
 
 ## Requirements
 
@@ -42,8 +45,13 @@ the grid measurements from the P1 meter are now shared between Domoticz and Home
   `target_soc` and `power` in watts.
 - Current grid import/export power, either as two non-negative sensors or as
   one signed sensor. Energy totals in kWh cannot substitute for power readings.
-- For boiler control: a controllable plug and, preferably, a power sensor to
-  distinguish a requested switch state from actual heating.
+- For boiler control: a controllable power plug and, preferably, a power sensor to
+  distinguish a requested switch state from actual heating. 
+  I use a Navid smart plug that includes power measurement via the Tuya Local integration,
+  but any controllable plug would do. Some of the cheap plugs need to be taken out of the 
+  socket once per month since they may stop providing power readings at some point but 
+  may still switch. I already fixed its DHCP lease in my router.
+  It can be a problem for the boiler control if the plug is not available when needed.
 
 ## Installation
 
